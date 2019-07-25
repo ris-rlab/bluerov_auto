@@ -104,8 +104,14 @@ class Code(object):
             - 7.08023833982539*pwm \
             + 2003.55692021905
 
-    def apply_control(self, forces, torques):
-        """Sends control input
+    def apply_control(self, forces, torques, camupdown):
+        """Sends control input to the robot by setting appropriate levels of PWM
+           in the /mavros/rc/override
+           Inputs: -1.0...1.0 for each of the force and torque axis
+                    (it corresponds to the desired velocity level)
+                    (the unit is arbitrary)
+                    camupdown is in the same range, deciding if the camera should be
+                    pitched a step down or a step up
         """
         # rc run between 1100 and 2000, a joy command is between -1.0 and 1.0
         # Correction SK:  1100 and 1900
@@ -128,7 +134,7 @@ class Code(object):
         # Yaw = Channel 4
         override[3] = int(torques[2]*400 + 1500)
         # Cam up = Channel 8
-        #override[7] = 1500+int(but[4]*400)-int(but[5]*400)
+        override[7] = int(camupdown*400 + 1500)
 
         # Unused:
         # Ch 1 = Pitch
@@ -164,6 +170,8 @@ class Code(object):
                 # Get joystick data
                 joy = self.sub.get_data()['joy']['axes']
                 but = self.sub.get_data()['joy']['buttons']
+                
+                camsetpt = 0.0
 
 		# Converting button presses to roll and pitch setting modification
 		self.curr_pitch_setting = self.enforce_limit(self.curr_pitch_setting - joy[7]*0.1)
@@ -172,6 +180,10 @@ class Code(object):
 		    self.curr_pitch_setting = 0.0
 		if (but[5] == 1):
 		    self.curr_roll_setting = 0.0                    
+                # Camera
+
+                camsetpt = but[4]-but[5]
+
 
 		forces = [0.0, 0.0, 0.0]
 		torques = [0.0, 0.0, 0.0]
@@ -183,7 +195,7 @@ class Code(object):
 		torques[1] = self.curr_pitch_setting #Pitch
 		torques[2] = -joy[0] #Yaw
 
-		self.apply_control(forces, torques)
+		self.apply_control(forces, torques, camsetpt)
 
             except Exception as error:
                 print('joy error:', error)
