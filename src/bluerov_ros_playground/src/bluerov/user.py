@@ -182,7 +182,6 @@ class Code(object):
 
                 camsetpt = but[4]-but[5]
 
-
 		forces = [0.0, 0.0, 0.0]
 		torques = [0.0, 0.0, 0.0]
 
