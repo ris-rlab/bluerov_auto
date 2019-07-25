@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+
+<launch>
+  <arg name="record" default="false"/>
+  <arg name="bagdir" default="/home/user/WorkJ/Collaboration/AWIBlueROV/data/"/>
+
+  <!-- roscore automatically started by roslaunch -->
+
+  <!-- starts the user main code lauch file -->
+  <include file="$(find bluerov_ros_playground)/launch/user_mav.launch" />
+
+  <!-- starts the node for waterlinked gps -->
+  <node pkg="waterlinked_ros_driver" type="waterlinked_ros_node.py" name="waterlinked_ros_node" />
+
+  <!-- make bags with data -->  
+  <node if="$(arg record)" pkg="rosbag" type="record" name="rosbag_bluerov" args="--lz4 -o $(arg bagdir)HeinckeAllData_"/>
+  
+</launch>

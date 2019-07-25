@@ -1,0 +1,38 @@
+#! /bin/bash
+# /etc/init.d/carobot
+source /home/bluerov/ros_workspace/devel/setup.bash
+export ROS_PACKAGE_PATH=/home/bluerov/ros_workspace:$ROS_PACKAGE_PATH
+export ROS_IP=192.168.1.2
+# initialze the pidfile
+BLUEROV_PIDFILE='/var/run/bluerov_boot.pid'
+# or alternativ use
+ROS_USER=bluerov
+touch $BLUEROV_PIDFILE
+/bin/chown $ROS_USER\:$ROS_USER $BLUEROV_PIDFILE
+# roslaunch vars
+ROSLAUNCH_BIN="/opt/ros/melodic/bin/roslaunch"
+ROSLAUNCH_ARGS="--pid=$BLUEROV_PIDFILE"
+# set path to launchfile
+ROSLAUNCH_FILE="/home/bluerov/ros_workspace/src/bluerov-heincke/launch/bluerov_control.launch"
+# carry out specific functions when asked by the system
+case "$1" in
+  start)
+    echo "Starting bluerov service ..."
+    su -c "$ROSLAUNCH_BIN $ROSLAUNCH_ARGS $ROSLAUNCH_FILE" $ROS_USER &
+    ;;  
+  stop)
+    kill -2 $(cat $BLUEROV_PIDFILE) > /dev/null
+    echo -n "" > $BLUEROV_PIDFILE
+    echo "Stopping bluerov services ..."
+    ;;  
+  restart)
+    $0 stop
+    sleep 3
+    $0 start
+    ;;  
+  *)  
+    echo "Usage: $0 {start|stop|restart}"
+    exit 1
+    ;;  
+esac
+exit 0
