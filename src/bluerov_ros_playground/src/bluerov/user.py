@@ -171,8 +171,6 @@ class Code(object):
                 joy = self.sub.get_data()['joy']['axes']
                 but = self.sub.get_data()['joy']['buttons']
                 
-                camsetpt = 0.0
-
 		# Converting button presses to roll and pitch setting modification
 		self.curr_pitch_setting = self.enforce_limit(self.curr_pitch_setting - joy[7]*0.1)
 		self.curr_roll_setting = self.enforce_limit(self.curr_roll_setting - joy[6]*0.1)
