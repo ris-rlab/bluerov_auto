@@ -192,6 +192,7 @@ class Code(object):
 		torques[1] = self.curr_pitch_setting #Pitch
 		torques[2] = -joy[0] #Yaw
 
+                # Call to a specialised function
 		self.apply_control(forces, torques, camsetpt)
 
             except Exception as error:
