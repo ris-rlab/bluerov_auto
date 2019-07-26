@@ -177,9 +177,9 @@ class Code(object):
 		if (but[4] == 1):
 		    self.curr_pitch_setting = 0.0
 		if (but[5] == 1):
-		    self.curr_roll_setting = 0.0                    
-                # Camera
+		    self.curr_roll_setting = 0.0
 
+                # Camera tilt setting (one button moves it up, the other down
                 camsetpt = but[4]-but[5]
 
 		forces = [0.0, 0.0, 0.0]
