@@ -1,0 +1,3 @@
+<launch>
+	<node pkg= "bluerov_ros_playground" type="send_depth.py" name="send_depth_node" output="screen" />
+</launch>
