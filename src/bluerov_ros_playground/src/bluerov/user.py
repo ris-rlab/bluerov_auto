@@ -3,7 +3,7 @@
 import cv2
 import rospy
 import time
-
+import math as m
 try:
     import pubs
     import subs
@@ -15,11 +15,37 @@ except:
 
 from geometry_msgs.msg import TwistStamped
 from mavros_msgs.srv import CommandBool
-from sensor_msgs.msg import JointState, Joy
-
+from sensor_msgs.msg import JointState, Joy, Imu
+from nav_msgs.msg import Odometry
 from sensor_msgs.msg import BatteryState, FluidPressure
 from mavros_msgs.msg import OverrideRCIn, RCIn, RCOut
 
+def Angle(des, curr):
+	x = 3.14-abs(des)+3.14-abs(curr)
+	if abs(des-curr)>x:
+		print("X is {}".format(x))
+		if(des-curr)>0:
+			return x
+		else:
+			return -x
+	else:
+		return curr-des
+
+def Val(old, curr, des):
+	if((old>0 and curr<0) or (old<0 and curr>0)):
+				if(abs(old-des)>2):
+					x = 3.14-abs(old-des)+ 3.14-abs(curr-des)
+					print("GIVE IT")
+					return x
+				else:
+					return curr-old
+	else:
+
+		return curr - old
+def error(er):
+	if(abs(er>20)):
+		er=20 * er/abs(er)
+	return er
 
 class Code(object):
 
@@ -54,15 +80,15 @@ class Code(object):
         self.pub.subscribe_topic('/mavros/rc/override', OverrideRCIn)
         self.pub.subscribe_topic('/mavros/setpoint_velocity/cmd_vel', TwistStamped)
         self.pub.subscribe_topic('/BlueRov2/body_command', JointState)
-
+	self.pub.subscribe_topic('/Location2', Odometry)
         self.sub.subscribe_topic('/joy', Joy)
+	self.sub.subscribe_topic('/odom', Odometry)
         self.sub.subscribe_topic('/mavros/battery', BatteryState)
         self.sub.subscribe_topic('/mavros/rc/in', RCIn)
         self.sub.subscribe_topic('/mavros/rc/out', RCOut)
-
         self.sub.subscribe_topic('/mavros/imu/static_pressure', FluidPressure)
         self.sub.subscribe_topic('/mavros/imu/diff_pressure', FluidPressure)
-
+	self.sub.subscribe_topic('/mavros/imu/data', Imu)
         self.cam = None
         try:
             video_udp_port = rospy.get_param("/user_node/video_udp_port")
@@ -104,14 +130,8 @@ class Code(object):
             - 7.08023833982539*pwm \
             + 2003.55692021905
 
-    def apply_control(self, forces, torques, camupdown):
-        """Sends control input to the robot by setting appropriate levels of PWM
-           in the /mavros/rc/override
-           Inputs: -1.0...1.0 for each of the force and torque axis
-                    (it corresponds to the desired velocity level)
-                    (the unit is arbitrary)
-                    camupdown is in the same range, deciding if the camera should be
-                    pitched a step down or a step up
+    def apply_control(self, forces, torques):
+        """Sends control input
         """
         # rc run between 1100 and 2000, a joy command is between -1.0 and 1.0
         # Correction SK:  1100 and 1900
@@ -134,7 +154,7 @@ class Code(object):
         # Yaw = Channel 4
         override[3] = int(torques[2]*400 + 1500)
         # Cam up = Channel 8
-        override[7] = int(camupdown*400 + 1500)
+        #override[7] = 1500+int(but[4]*400)-int(but[5]*400)
 
         # Unused:
         # Ch 1 = Pitch
@@ -152,6 +172,23 @@ class Code(object):
     def run(self):
         """Run user code
         """
+	dr = [0, 2.14]
+	k_py = 290
+	k_dy = 190
+	k_iy = 12
+	oldr = [0 for u in range(2)]
+	Pr = [0 for u in range(2)]
+	Dr = [0 for u in range(2)]
+	Ir = [0 for u in range(2)]
+	er = [0 for u in range(2)]
+	P =[0 for u in range(3)]
+	I = [0 for u in range(3)]
+	D = [0 for u in range(3)]
+	k_p = 370 
+	k_i = 0.7
+	k_d = 600
+	old = [0 for u in range(2)]
+	d = [14, -20]
         while not rospy.is_shutdown():
             time.sleep(0.1)
             # Try to get data
@@ -170,41 +207,75 @@ class Code(object):
                 # Get joystick data
                 joy = self.sub.get_data()['joy']['axes']
                 but = self.sub.get_data()['joy']['buttons']
-                
+
 		# Converting button presses to roll and pitch setting modification
 		self.curr_pitch_setting = self.enforce_limit(self.curr_pitch_setting - joy[7]*0.1)
 		self.curr_roll_setting = self.enforce_limit(self.curr_roll_setting - joy[6]*0.1)
 		if (but[4] == 1):
 		    self.curr_pitch_setting = 0.0
 		if (but[5] == 1):
-		    self.curr_roll_setting = 0.0
-
-                # Camera tilt setting (one button moves it up, the other down
-                camsetpt = but[4]-but[5]
+		    self.curr_roll_setting = 0.0                    
 
 		forces = [0.0, 0.0, 0.0]
 		torques = [0.0, 0.0, 0.0]
-
-		forces[0] = joy[4] #Surge
-		forces[1] = -joy[3] #Sway
-		forces[2] = joy[1] #Heave
+		a = self.sub.get_data()['mavros']['imu']['data']
+		q = a['orientation']
+		print("ROll YAW:")
+		sinr_cosp = +2.0 * (q['w'] * q['x'] + q['y'] * q['z'])
+    		cosr_cosp = +1.0 - 2.0 * (q['x'] * q['x'] + q['y'] * q['y'])
+    		sinp = +2.0 * (q['w'] * q['y'] - q['z'] * q['x'])
+    		siny_cosp = +2.0 * (q['w'] * q['z'] + q['x'] * q['y'])
+    		cosy_cosp = +1.0 - 2.0 * (q['y'] * q['y'] + q['z'] * q['z'])  
+    		yaw = m.atan2(siny_cosp, cosy_cosp)
+		roll = m.atan2(sinr_cosp, cosr_cosp)
+		posr = [yaw, roll]
+		print("YAW ROll : {} {}".format(posr[0], posr[1]))
+		for i in range(2):
+			val1 = Angle(dr[i], posr[i])
+			Pr[i] = val1*k_py
+			#print("ROll YAW: {} {}".format(posr[0], posr[1]))
+			Dr[i] = -(abs(Val(oldr[i], val1, dr[i]))/0.11)*k_dy*(Pr[i]/abs(Pr[i]))
+                        #print("D[i] P[i] I[i] {} {}".format(Dr[i], Pr[i]))
+			Ir[i] += val1*k_iy*0.11
+			er[i] = Pr[i]+Dr[i]+Ir[i]
+			oldr[i] = val1
+		"""for i in range(2):
+			P[i] = (d[i]-pos[i])*k_p
+			I[i] += (d[i]-pos[i])*k_i*0.11
+			D[i] = ((-old[i]+d[i]-pos[i])/0.11)*k_d
+			#print("Initial Error: {}".format(old[i]))
+			#print("Current Error: {}".format(d[i]-pos[i]))
+			#print("Rate: {}".format(pos[i]-old_p[i]))
+			if I[i]>5 or I[i]<-5:
+				I[i]=0
+			e[i] = P[i]+I[i]+D[i]
+			old[i] = d[i]-pos[i]"""
+		if(abs(er[0])>100):
+			er[0]=100 * er[0]/abs(er[0])
+		
+		print("Error is: {}".format(er[0]))
+		
+		torques[2] = er[0]/300
+		forces[0] = joy[4]/5 #Surge
+		forces[1] = -joy[3]/5 #Sway
+		forces[2] = joy[1]/5 #Heave
 		torques[0] = self.curr_roll_setting #Roll
 		torques[1] = self.curr_pitch_setting #Pitch
-		torques[2] = -joy[0] #Yaw
+		#torques[2] = -joy[0] #Yaw
 
-                # Call to a specialised function
-		self.apply_control(forces, torques, camsetpt)
+		self.apply_control(forces, torques)
 
             except Exception as error:
                 print('joy error:', error)
 
             try:
                 # Get pwm output and send it to Gazebo model
-                rc = self.sub.get_data()['mavros']['rc']['out']['channels']
+		rc = self.sub.get_data()['mavros']['rc']['out']['channels']
+                
                 joint = JointState()
                 joint.name = ["thr{}".format(u + 1) for u in range(5)]
                 joint.position = [self.pwm_to_thrust(pwm) for pwm in rc]
-
+		
                 self.pub.set_data('/BlueRov2/body_command', joint)
             except Exception as error:
                 print('rc error:', error)
