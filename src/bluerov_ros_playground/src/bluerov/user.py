@@ -19,7 +19,7 @@ from sensor_msgs.msg import JointState, Joy, Imu
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import BatteryState, FluidPressure
 from mavros_msgs.msg import OverrideRCIn, RCIn, RCOut
-
+from std_msgs.msg import Float32
 def Angle(des, curr):
 	x = 3.14-abs(des)+3.14-abs(curr)
 	if abs(des-curr)>x:
@@ -89,6 +89,7 @@ class Code(object):
         self.sub.subscribe_topic('/mavros/imu/static_pressure', FluidPressure)
         self.sub.subscribe_topic('/mavros/imu/diff_pressure', FluidPressure)
 	self.sub.subscribe_topic('/mavros/imu/data', Imu)
+	self.sub.subscribe_topic('/depth', Float32)
         self.cam = None
         try:
             video_udp_port = rospy.get_param("/user_node/video_udp_port")
@@ -173,9 +174,13 @@ class Code(object):
         """Run user code
         """
 	dr = [0, 2.14]
-	k_py = 290
+	k_py = 190
 	k_dy = 190
 	k_iy = 12
+	Iz = 0
+	Iz1 = 0
+	sum1 = 0
+	cnt = 0
 	oldr = [0 for u in range(2)]
 	Pr = [0 for u in range(2)]
 	Dr = [0 for u in range(2)]
@@ -184,11 +189,16 @@ class Code(object):
 	P =[0 for u in range(3)]
 	I = [0 for u in range(3)]
 	D = [0 for u in range(3)]
-	k_p = 370 
-	k_i = 0.7
-	k_d = 600
-	old = [0 for u in range(2)]
-	d = [14, -20]
+	k_p = 170 
+	k_i = 50
+	k_d = 500
+	boolx = True
+	old = [0 for u in range(3)]
+	e = [0 for u in range(3)]
+	d = [14, 0, -1.5]
+	rospy.wait_for_service('/mavros/cmd/arming')
+        self.arm_service = rospy.ServiceProxy('/mavros/cmd/arming', CommandBool)
+        self.arm_service(True)
         while not rospy.is_shutdown():
             time.sleep(0.1)
             # Try to get data
@@ -207,7 +217,7 @@ class Code(object):
                 # Get joystick data
                 joy = self.sub.get_data()['joy']['axes']
                 but = self.sub.get_data()['joy']['buttons']
-
+		depth = self.sub.get_data()['depth']['data']
 		# Converting button presses to roll and pitch setting modification
 		self.curr_pitch_setting = self.enforce_limit(self.curr_pitch_setting - joy[7]*0.1)
 		self.curr_roll_setting = self.enforce_limit(self.curr_roll_setting - joy[6]*0.1)
@@ -215,10 +225,30 @@ class Code(object):
 		    self.curr_pitch_setting = 0.0
 		if (but[5] == 1):
 		    self.curr_roll_setting = 0.0                    
-
+		if(boolx):		
+			rospy.wait_for_service('/mavros/cmd/arming')
+       			arm_service = rospy.ServiceProxy('/mavros/cmd/arming', CommandBool)
+        		arm_service(True)
+			boolx = False
+		
 		forces = [0.0, 0.0, 0.0]
 		torques = [0.0, 0.0, 0.0]
+		pos1 = self.sub.get_data()['odom']['pose']['pose']['position']
+		x1 = pos1['x']
+		y1 = pos1['y']
+		print("Next")
+		pos = [x1, y1, depth]
 		a = self.sub.get_data()['mavros']['imu']['data']
+		accz = a['linear_acceleration']['z']
+		"""if(cnt<=500):		
+			sum1 += accz
+			cnt = cnt+1
+		if(cnt>=500):
+			print("{}".format(sum1/cnt))"""
+		
+		Iz += (accz-9.858521502)*0.11
+		Iz1 += Iz*0.11
+		print("True Height: {}".format(Iz1-0.25))
 		q = a['orientation']
 		print("ROll YAW:")
 		sinr_cosp = +2.0 * (q['w'] * q['x'] + q['y'] * q['z'])
@@ -239,29 +269,32 @@ class Code(object):
 			Ir[i] += val1*k_iy*0.11
 			er[i] = Pr[i]+Dr[i]+Ir[i]
 			oldr[i] = val1
-		"""for i in range(2):
+		for i in range(3):
+			print("Error101 {}".format(d[i]-pos[i]))
 			P[i] = (d[i]-pos[i])*k_p
 			I[i] += (d[i]-pos[i])*k_i*0.11
 			D[i] = ((-old[i]+d[i]-pos[i])/0.11)*k_d
 			#print("Initial Error: {}".format(old[i]))
 			#print("Current Error: {}".format(d[i]-pos[i]))
 			#print("Rate: {}".format(pos[i]-old_p[i]))
-			if I[i]>5 or I[i]<-5:
-				I[i]=0
+			if I[i]>150 or I[i]<-150:
+				I[i]=150 * I[i]/abs(I[i])
 			e[i] = P[i]+I[i]+D[i]
-			old[i] = d[i]-pos[i]"""
+			old[i] = d[i]-pos[i]
+		if(abs(e[2])>1000):
+			e[2]=1000 * e[2]/abs(e[2])
 		if(abs(er[0])>100):
 			er[0]=100 * er[0]/abs(er[0])
+		print("{} {} {} is positon".format(pos[0], pos[1], pos[2]))
+		print("Error is: {}".format(e[2]))
 		
-		print("Error is: {}".format(er[0]))
-		
-		torques[2] = er[0]/300
-		forces[0] = joy[4]/5 #Surge
-		forces[1] = -joy[3]/5 #Sway
-		forces[2] = joy[1]/5 #Heave
+		#torques[2] = er[0]/300
+		forces[0] = joy[4]/1.5 #Surge
+		forces[1] = -joy[3]/1.5 #Sway
+		forces[2] = e[2]/1500 #Heave
 		torques[0] = self.curr_roll_setting #Roll
 		torques[1] = self.curr_pitch_setting #Pitch
-		#torques[2] = -joy[0] #Yaw
+		torques[2] = -joy[0]/1.5 #Yaw
 
 		self.apply_control(forces, torques)
 
@@ -307,3 +340,4 @@ if __name__ == "__main__":
         exit(1)
     code = Code()
     code.run()
+
