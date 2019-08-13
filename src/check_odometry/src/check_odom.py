@@ -2,6 +2,7 @@
 
 import rospy
 from nav_msgs.msg import Odometry
+from tf import TransformBroadcaster
 from sensor_msgs.msg import Imu
 from geometry_msgs.msg import PointStamped, Point, Pose, Quaternion, Twist, Vector3
 
@@ -45,6 +46,7 @@ def wl_callback(msg):
 	# next, we'll publish the odometry message over ROS
 	odom.header.stamp = current_time
 	odom.header.frame_id = "odom"
+	odom.child_frame_id = "base_link"
 
 	# set the position
 
@@ -53,6 +55,12 @@ def wl_callback(msg):
 	odom.pose.pose.position.z = z
 
 	odom_pub.publish(odom)
+	tf_pub.sendTransform((x, y, z),
+	
+(odom.pose.pose.orientation.x,odom.pose.pose.orientation.y,odom.pose.pose.orientation.z,odom.pose.pose.orientation.w),
+			     current_time,
+			     "base_link",
+			     "odom")
 
 
 rospy.init_node("check_odometry")
@@ -61,5 +69,6 @@ wl_sub=rospy.Subscriber("/waterlinked/acoustic_position/raw",PointStamped,wl_cal
 imu_sub=rospy.Subscriber('/mavros/imu/data',Imu,imu_callback)
 imu_pub=rospy.Publisher("/odom",Odometry,queue_size=50)
 odom_pub = rospy.Publisher("odom", Odometry, queue_size=50)
+tf_pub = TransformBroadcaster()
 
 rospy.spin()
