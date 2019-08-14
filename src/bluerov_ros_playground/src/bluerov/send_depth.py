@@ -7,6 +7,7 @@ import rospy
 from mavros_msgs.msg import Mavlink
 # pack and unpack functions to deal with the bytearray
 from struct import pack, unpack
+from std_msgs.msg import String
 import requests
 import argparse
 import time
@@ -32,6 +33,8 @@ def callback(data):
 
         depth = (1013 - press_abs) / 98.0665
         print('depth:', depth, 'm')
+	pub = rospy.Publisher("/mavros/depth", String, queue_size=50)
+        pub.publish(str(depth))
         temp = temperature
 	temp = 20.0
         url = 'http://192.168.2.94/api/v1/external/depth' #'http://demo.waterlinked.com/api/v1/external/depth'

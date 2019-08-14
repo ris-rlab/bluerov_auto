@@ -112,6 +112,12 @@ if __name__ == '__main__':
         parser.add_argument('-u', '--url', help='Base URL to use',
                             type=str,
                             default='http://192.168.2.94')
+        parser.add_argument('__name:', help='Fake argument for roslaunch compatibility',
+                            type=str,
+                            default='')
+        parser.add_argument('__log:', help='Fake argument for roslaunch compatibility',
+                            type=str,
+                            default='')
         args = parser.parse_args()
         base_url = args.url
         waterlinked(base_url)
