@@ -1,0 +1,3 @@
+<launch>
+	<node pkg = "filter" type = "filtering.cpp" name = "PosePublisher" respawn = "true"/>
+</launch>
