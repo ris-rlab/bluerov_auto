@@ -27,6 +27,8 @@ def imu_callback(msg):
 	odom.pose.pose.orientation.y = imu_y
 	odom.pose.pose.orientation.z = imu_z
 	odom.pose.pose.orientation.w = imu_w
+	
+	odom.pose.covariance = [0.2, 0, 0, 0, 0, 0, 0, 0.2, 0, 0, 0, 0, 0, 0, 0.2, 0, 0, 0, 0, 0, 0, 0.2, 0, 0, 0, 0, 0, 0, 0.2, 0, 0, 0, 0, 0, 0, 0.2]
 
 	# publish the message
 	#imu_pub.publish(odom)
