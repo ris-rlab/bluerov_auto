@@ -239,10 +239,12 @@ HydroLink HydroModelParser::parseLink(const tinyxml2::XMLElement* elem, const ur
     const auto node = tag->FirstChildElement("origin");
     if(node)
       link.cob = readVector3(node->Attribute("xyz"));
-
-    addBuoyancy(link, tag->FirstChildElement("buoyancy"),
-                urdf_link->inertial, density);
-    addHydrodynamics(link, tag->FirstChildElement("hydrodynamics"), density);
+    link.buoyancy_force = 0;
+   for(auto i = tag->FirstChildElement("buoyancy"); i!=nullptr; i=i->NextSiblingElement("buoyancy")){
+    	addBuoyancy(link, i, urdf_link->inertial, density);
+	
+	}
+   addHydrodynamics(link, tag->FirstChildElement("hydrodynamics"), density);
   }
 
   // find fixed child links
@@ -310,13 +312,18 @@ void HydroModelParser::addBuoyancy(HydroLink &link, const tinyxml2::XMLElement* 
     return;
   if(inertial == nullptr)
     return;
-
+  ROS_INFO("density");
   for(auto node = elem->FirstChildElement(); node != nullptr; node = node->NextSiblingElement())
   {
-    if(strcmp(node->Value(), "compensation") == 0)
+    if((strcmp(node->Value(), "origin") == 0))      
+	link.cob = readVector3(node->Attribute("xyz"));
+   else if(strcmp(node->Value(), "compensation") == 0)
       link.buoyancy_force = 9.81 * inertial->mass * atof(node->GetText()) * density;
-    else if(strcmp(node->Value(), "limit") == 0)
+    else if(strcmp(node->Value(), "limit") == 0){
       link.buoyancy_limit = atof(node->Attribute("radius"));
+		
+	}
+    
   }
 }
 

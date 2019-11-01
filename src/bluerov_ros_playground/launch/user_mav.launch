@@ -10,7 +10,7 @@
   <arg name="tgt_component" default="1"/>
   <arg name="pluginlists_yaml" value="$(find bluerov_ros_playground)/launch/mav_pluginlists.yaml"/>
   <arg name="config_yaml" value="$(find mavros)/launch/apm_config.yaml"/>
-  <arg name="joy_dev" default="/dev/input/js2"/>
+  <arg name="joy_dev" default="/dev/input/js0"/>
   <arg name="log_output" default="screen"/>
 
   <node pkg="mavros" type="mavros_node" name="mavros" required="true" clear_params="true" output="$(arg log_output)">
@@ -30,10 +30,18 @@
   <node respawn="true" pkg="joy" type="joy_node" name="joy_node">
     <param name="dev" type="string" value="$(arg joy_dev)" />
   </node>
-  <node pkg = "check_odometry" type="check_odom.py" name = "check_odom" respawn = "true"/>
-  <node pkg="rosservice" type="rosservice" name="mavros_set_stream" args="call --wait /mavros/set_stream_rate 0 10 1"/>
+     
+   <node pkg = "check_odometry" type="check_odom.py" name = "check_odom" respawn = "true"/>
+   <include file = "$(find robot_localization)/launch/ekf_template.launch"/>
+   
 
+  <node pkg="rosservice" type="rosservice" name="mavros_set_stream" args="call --wait /mavros/set_stream_rate 0 10 1"/>
+  <node pkg = "filter" type = "filtering.cpp" name = "PosePublisher" respawn = "true"/>
   <node pkg="bluerov_ros_playground" type="user_mav" name="user_node" output="$(arg log_output)">
     <param name="video_udp_port" value="$(arg video_udp_port)"/>
   </node>
+  <node pkg = "bluerov_ros_playground" type = "Control.py" name = "Joystick_node" respawn = "true" output="screen"/>
+  <node pkg = "bluerov_ros_playground" type = "Control_Autonomou.py" name = "aut_node" respawn = "true" output="screen"/>
+  <node pkg = "bluerov_ros_playground" type = "send_depth.py" name = "send_depth_node" respawn = "true" output = "screen"/>
+  <node pkg = "waterlinked_ros_driver" type="waterlinked_ros_node.py" name="waterlinked" respawn = "true"/>
 </launch>

@@ -29,20 +29,6 @@ class Pubs(object):
         """
         return self.data
 
-    def get_field(self, field_name):
-        """Return data dict
-
-        Returns:
-            dict: Data from all topics
-        """
-        try:
-            res = getattr(self, field_name)
-        except:
-            res = 0
-            print('Trying to access wrong data field: ', field_name)
-            
-        return res
-
     def set_data(self, path, value={}, pub=None):
         """Add topic to dict and add data on it
 

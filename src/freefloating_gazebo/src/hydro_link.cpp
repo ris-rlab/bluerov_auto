@@ -15,8 +15,8 @@ Eigen::Matrix3d skew(const Eigen::Vector3d &v)
 Eigen::Vector3d HydroLink::buoyancyForce(double surface_distance)
 {
   Eigen::Vector3d force(0,0,buoyancy_force);
-
-  if(surface_distance > -buoyancy_limit)
+  //std::cout<<"This is "<<force<<std::endl;
+  if(surface_distance >= -buoyancy_limit)
   {
     if(surface_distance > buoyancy_limit)
       force *= 0;
@@ -43,6 +43,7 @@ Eigen::Vector6d HydroLink::hydroDynamicForce(Eigen::Vector6d &vel)
   // added mass part
   if(has_added_mass)
   {
+    //std::cout<<"YESSS"<<std::endl;
     const Eigen::Vector6d acc = (vel - vel_prev)/dt;
     force -= added_mass * acc;
 

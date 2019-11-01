@@ -5,17 +5,18 @@ from __future__ import print_function
 import rospy
 # Mavlink ROS messages
 from mavros_msgs.msg import Mavlink
+from std_msgs.msg import Float32
 # pack and unpack functions to deal with the bytearray
 from struct import pack, unpack
-from std_msgs.msg import String
 import requests
 import argparse
 import time
 import logging
 
+
 log = logging.getLogger()
 logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
-
+pub = rospy.Publisher('depth', Float32)
 
 # Topic callback
 def callback(data):
@@ -33,8 +34,7 @@ def callback(data):
 
         depth = (1013 - press_abs) / 98.0665
         print('depth:', depth, 'm')
-	pub = rospy.Publisher("/mavros/depth", String, queue_size=50)
-        pub.publish(str(depth))
+	pub.publish(depth)
         temp = temperature
 	temp = 20.0
         url = 'http://192.168.2.94/api/v1/external/depth' #'http://demo.waterlinked.com/api/v1/external/depth'
@@ -50,9 +50,7 @@ def callback(data):
 def listener():  
 
     rospy.init_node("send_depth_node", anonymous=True)
-
     rospy.Subscriber("/mavlink/from", Mavlink, callback)
-
     rospy.spin()
 
 if __name__ == '__main__':

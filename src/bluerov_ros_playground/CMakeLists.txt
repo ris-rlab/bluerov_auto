@@ -2,13 +2,14 @@ cmake_minimum_required(VERSION 2.8.3)
 project(bluerov_ros_playground)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+ add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   rospy
+  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -38,19 +39,24 @@ catkin_python_setup()
 ##   * add "message_generation" and every package in MSG_DEP_SET to
 ##     find_package(catkin REQUIRED COMPONENTS ...)
 ##   * add "message_runtime" and every package in MSG_DEP_SET to
-##     catkin_package(CATKIN_DEPENDS ...)
+     
 ##   * uncomment the add_*_files sections below as needed
 ##     and list every .msg/.srv/.action file to be processed
 ##   * uncomment the generate_messages entry below
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
+ add_message_files(
+   FILES
+   Custom.msg
 #   Message2.msg
-# )
-
+ )
+generate_messages(
+   DEPENDENCIES
+   #std_msgs  # Or other packages containing msgs
+ )
+catkin_package(
+	CATKIN_DEPENDS message_runtime)
 ## Generate services in the 'srv' folder
 # add_service_files(
 #   FILES
@@ -66,10 +72,7 @@ catkin_python_setup()
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
-# )
+ 
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -186,6 +189,7 @@ install(FILES
   launch/user_mav.launch
   launch/video.launch
   launch/bluerov2_node.launch
+  launch/send_depth.launch
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
 )
 
@@ -200,8 +204,12 @@ catkin_install_python(PROGRAMS
   src/bluerov/bin/video
   src/bluerov/gazebo_teleop.py
   src/bluerov/sitl.py
+  src/bluerov/send_depth.py
   src/bridge/bridge.py
   src/bridge/bluerov_node.py
+  src/bluerov/Control.py
+  src/bluerov/Joystick.py
+  src/bluerov/Control_Autonomou.py
   src/bridge/node
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

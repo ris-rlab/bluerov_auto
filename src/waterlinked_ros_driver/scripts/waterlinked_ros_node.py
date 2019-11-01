@@ -123,4 +123,3 @@ if __name__ == '__main__':
         waterlinked(base_url)
     except rospy.ROSInterruptException:
         pass
-

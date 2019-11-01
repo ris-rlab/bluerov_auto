@@ -109,21 +109,25 @@
       </geometry>
     </collision-->
     <buoyancy>
-        <compensation>0.2525</compensation>
-        <origin xyz= "0.12585 0.111 -0.8945"/>
+        <compensation>0.5</compensation>
+	<added_mass>0.150 0 0 0 0 0 0 0.167 0 0 0 0 0 0 0.359 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.375</added_mass>
+	<damping type = "linear" xyz = "0.42 0.75 0.44" rpy = "0 0 0.20"/>
+	<damping xyz = "1.25 4.47 3.25" rpy = "0 0 6.093"/>
+	
+        <origin xyz= "0 0 0"/>
     </buoyancy>
-    <buoyancy>
-        <compensation>0.2525</compensation>
-        <origin xyz= "-0.12585 0.111 -0.8945"/>
-    </buoyancy>
-    <buoyancy>
-        <compensation>0.2525</compensation>
+    <!--buoyancy>
+        <compensation>0.5</compensation>
         <origin xyz= "-0.12585 -0.111 -0.8945"/>
     </buoyancy>
     <buoyancy>
-        <compensation>0.2525</compensation>
-        <origin xyz= "0.12585 -0.111 -0.8945"/>
+        <compensation>0.5</compensation>
+        <origin xyz= "0.12585 0.111 -0.8945"/>
     </buoyancy>
+    <buoyancy>
+        <compensation>0.5</compensation>
+        <origin xyz= "0.12585 -0.111 -0.8945"/>
+    </buoyancy-->
   </link>
 
   <link name="camera_link">

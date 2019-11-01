@@ -47,9 +47,9 @@ public:
   Eigen::Matrix6d inertia;
   Eigen::Vector6d lin_damping, quad_damping;
   Eigen::Matrix6d added_mass;
-  bool has_lin_damping = false;
-  bool has_quad_damping = false;
-  bool has_added_mass = false;
+  bool has_lin_damping = true;
+  bool has_quad_damping = true;
+  bool has_added_mass = true;
 
 private:
   double dt;

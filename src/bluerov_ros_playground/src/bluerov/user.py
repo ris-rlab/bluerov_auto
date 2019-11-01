@@ -90,6 +90,7 @@ class Code(object):
         self.sub.subscribe_topic('/mavros/imu/diff_pressure', FluidPressure)
 	self.sub.subscribe_topic('/mavros/imu/data', Imu)
 	self.sub.subscribe_topic('/depth', Float32)
+	self.sub.subscribe_topic('/odometry/filtered', Odometry)
         self.cam = None
         try:
             video_udp_port = rospy.get_param("/user_node/video_udp_port")
@@ -173,14 +174,13 @@ class Code(object):
     def run(self):
         """Run user code
         """
-	dr = [0, 2.14]
-	k_py = 190
-	k_dy = 190
-	k_iy = 12
+	dr = [0.4, 1.74]
+	k_py = 250
+	k_dy = 50
+	k_iy = 1
 	Iz = 0
 	Iz1 = 0
-	sum1 = 0
-	cnt = 0
+	
 	oldr = [0 for u in range(2)]
 	Pr = [0 for u in range(2)]
 	Dr = [0 for u in range(2)]
@@ -189,13 +189,14 @@ class Code(object):
 	P =[0 for u in range(3)]
 	I = [0 for u in range(3)]
 	D = [0 for u in range(3)]
-	k_p = 170 
-	k_i = 50
-	k_d = 500
+	k_p = [390, 300, 170] 
+	k_i = [20, 20, 50]
+	k_d = [690, 590, 500]
 	boolx = True
 	old = [0 for u in range(3)]
 	e = [0 for u in range(3)]
-	d = [14, 0, -1.5]
+	d = [-3.7, 3, -1.5]
+	xtra = 0
 	rospy.wait_for_service('/mavros/cmd/arming')
         self.arm_service = rospy.ServiceProxy('/mavros/cmd/arming', CommandBool)
         self.arm_service(True)
@@ -233,21 +234,14 @@ class Code(object):
 		
 		forces = [0.0, 0.0, 0.0]
 		torques = [0.0, 0.0, 0.0]
-		pos1 = self.sub.get_data()['odom']['pose']['pose']['position']
+		pos1 = self.sub.get_data()['odometry']['filtered']['pose']['pose']['position']
 		x1 = pos1['x']
 		y1 = pos1['y']
 		print("Next")
 		pos = [x1, y1, depth]
 		a = self.sub.get_data()['mavros']['imu']['data']
-		accz = a['linear_acceleration']['z']
-		"""if(cnt<=500):		
-			sum1 += accz
-			cnt = cnt+1
-		if(cnt>=500):
-			print("{}".format(sum1/cnt))"""
-		
-		Iz += (accz-9.858521502)*0.11
-		Iz1 += Iz*0.11
+		acc = a['linear_acceleration']
+		print("x: {}  y: {} z: {} ".format(acc['x'], acc['y'], acc['z']))
 		print("True Height: {}".format(Iz1-0.25))
 		q = a['orientation']
 		print("ROll YAW:")
@@ -271,9 +265,9 @@ class Code(object):
 			oldr[i] = val1
 		for i in range(3):
 			print("Error101 {}".format(d[i]-pos[i]))
-			P[i] = (d[i]-pos[i])*k_p
-			I[i] += (d[i]-pos[i])*k_i*0.11
-			D[i] = ((-old[i]+d[i]-pos[i])/0.11)*k_d
+			P[i] = (d[i]-pos[i])*k_p[i]
+			I[i] += (d[i]-pos[i])*k_i[i]*0.11
+			D[i] = ((-old[i]+d[i]-pos[i])/0.11)*k_d[i]
 			#print("Initial Error: {}".format(old[i]))
 			#print("Current Error: {}".format(d[i]-pos[i]))
 			#print("Rate: {}".format(pos[i]-old_p[i]))
@@ -283,19 +277,35 @@ class Code(object):
 			old[i] = d[i]-pos[i]
 		if(abs(e[2])>1000):
 			e[2]=1000 * e[2]/abs(e[2])
-		if(abs(er[0])>100):
-			er[0]=100 * er[0]/abs(er[0])
+		if(abs(er[0])>650):
+			er[0]=650 * er[0]/abs(er[0])
 		print("{} {} {} is positon".format(pos[0], pos[1], pos[2]))
-		print("Error is: {}".format(e[2]))
-		
-		#torques[2] = er[0]/300
-		forces[0] = joy[4]/1.5 #Surge
-		forces[1] = -joy[3]/1.5 #Sway
-		forces[2] = e[2]/1500 #Heave
+		if(abs(e[0])>1000):
+			e[0]=1000 * e[0]/abs(e[0])
+		if(abs(e[1])>900):
+			e[1]=900 * e[1]/abs(e[1])
+		print("Error is: {} {}".format(er[0], e[1]))
+		"""if(xtra<20):		
+			torques[2] = er[0]/845
+			forces[0] = 0#-e[0]/(1300)#joy[4]/1.5#e[0]/(1300) #Surge
+			xtra = xtra+1
+		if(xtra>=20 and xtra<50):
+			torques[2] = 0
+			forces[0] = -e[0]/(1300)
+			xtra = xtra+1
+		if(xtra>=50):
+			xtra = 0	
+		print("XXXXTRA  {}".format(xtra))"""
+		torques[2] = 0#(er[0]/950)
+		forces[0] = 0#e[1]/(1300)#(1-er[0]/950)*
+		forces[1] = 0#(1-er[0]/950)*e[0]/1300#-joy[3]/1.50##-joy[3]/1.5#e[1]/400 #Sway
+		forces[2] = 0#joy[1]/1.5#joy[1]/1.50#joy[1]/1.50#e[2]/300 #Heave
 		torques[0] = self.curr_roll_setting #Roll
 		torques[1] = self.curr_pitch_setting #Pitch
-		torques[2] = -joy[0]/1.5 #Yaw
-
+		#torques[2] = -joy[0]/1.5 #Yaw
+		
+		
+		
 		self.apply_control(forces, torques)
 
             except Exception as error:
