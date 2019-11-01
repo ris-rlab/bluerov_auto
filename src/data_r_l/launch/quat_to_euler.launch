@@ -1,3 +1,0 @@
-<launch>
-	<node pkg= "data_r_l" type="quat_to_euler.py" name="quaternion_to_euler" output="screen" />
-</launch>
