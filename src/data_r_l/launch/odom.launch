@@ -1,0 +1,3 @@
+<launch>
+	<node pkg= "data_r_l" type="odom.py" name="pub_odometry" output="screen" />
+</launch>

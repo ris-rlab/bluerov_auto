@@ -40,8 +40,12 @@
   <node pkg="bluerov_ros_playground" type="user_mav" name="user_node" output="$(arg log_output)">
     <param name="video_udp_port" value="$(arg video_udp_port)"/>
   </node>
+<<<<<<< HEAD
   <node pkg = "bluerov_ros_playground" type = "Control.py" name = "Joystick_node" respawn = "true" output="screen"/>
   <node pkg = "bluerov_ros_playground" type = "Control_Autonomou.py" name = "aut_node" respawn = "true" output="screen"/>
   <node pkg = "bluerov_ros_playground" type = "send_depth.py" name = "send_depth_node" respawn = "true" output = "screen"/>
   <node pkg = "waterlinked_ros_driver" type="waterlinked_ros_node.py" name="waterlinked" respawn = "true"/>
+=======
+  <node pkg= "bluerov_ros_playground" type="send_depth.py" name="send_depth_node" output="screen" />
+>>>>>>> 63411282da2421eddabcc3637ba1ad2360c40937
 </launch>
